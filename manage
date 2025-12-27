@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+
+set -u  # menangani exit code sendiri
+
+# =========================================================
+# manage — unified command wrapper with audit logging
+# =========================================================
+
+# harus dijalankan dari directory yang berisi manage.py
+if [[ ! -f "manage.py" ]]; then
+    echo "❌ manage.py tidak ditemukan di current working directory"
+    echo "   Pastikan lo menjalankan perintah ini dari folder Django project (workspace/)"
+    exit 1
+fi
+
+# python & pip dari venv
+VENV_BIN="$(dirname "$(realpath "$0")")"
+VENV_PYTHON="$VENV_BIN/python"
+VENV_PIP="$VENV_BIN/pip"
+
+if [[ ! -x "$VENV_PYTHON" ]]; then
+    echo "❌ Python venv tidak ditemukan"
+    exit 1
+fi
+
+# lokasi log (relative ke workspace/)
+LOG_FILE="../logs/bash_history.log"
+mkdir -p "$(dirname "$LOG_FILE")"
+
+# warning jika venv belum aktif
+if [[ -z "${VIRTUAL_ENV:-}" ]]; then
+    echo "⚠️  Virtualenv belum aktif (VIRTUAL_ENV tidak terdeteksi)"
+    echo "   Command tetap dijalankan via .venv"
+fi
+
+# util: cek working tree git (CLEAN / DIRTY / N/A)
+git_working_tree_state() {
+    if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        if git diff-index --quiet HEAD -- 2>/dev/null; then
+            echo "GIT:CLEAN"
+        else
+            echo "GIT:DIRTY"
+        fi
+    else
+        echo "GIT:N/A"
+    fi
+}
+
+# ambil subcommand pertama
+SUBCOMMAND="${1:-}"
+
+TIMESTAMP="$(date '+%Y-%m-%d %H:%M:%S')"
+FULL_CMD="manage $*"
+
+EXIT_CODE=0
+GIT_STATE=""
+
+case "$SUBCOMMAND" in
+    git)
+        shift
+        git "$@"
+        EXIT_CODE=$?
+        ;;
+    pip)
+        shift
+        "$VENV_PIP" "$@"
+        EXIT_CODE=$?
+        ;;
+    *)
+        "$VENV_PYTHON" manage.py "$@"
+        EXIT_CODE=$?
+        ;;
+esac
+
+# =========================================================
+# logging hasil
+# - working tree dicatat HANYA jika:
+#   * command = git / pip
+#   * exit code ≠ 0
+# =========================================================
+if [[ $EXIT_CODE -eq 0 ]]; then
+    echo "[$TIMESTAMP] [OK]   $FULL_CMD" >> "$LOG_FILE"
+else
+    if [[ "$SUBCOMMAND" == "git" || "$SUBCOMMAND" == "pip" ]]; then
+        GIT_STATE="$(git_working_tree_state)"
+        echo "[$TIMESTAMP] [FAIL:$EXIT_CODE] [$GIT_STATE] $FULL_CMD" >> "$LOG_FILE"
+    else
+        echo "[$TIMESTAMP] [FAIL:$EXIT_CODE] $FULL_CMD" >> "$LOG_FILE"
+    fi
+fi
+
+exit $EXIT_CODE
+
