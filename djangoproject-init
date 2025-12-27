@@ -1,0 +1,272 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ==============================================
+# djangoproject-init
+# Initialize a cozy Django development repo
+# 
+# scripted with :love: by eRQee (q@serverq.org)
+# ==============================================
+
+SCRIPT_NAME="$(basename "$0")"
+DEFAULT_DJANGO_MAJOR=6
+DRY_RUN=false
+
+TIMESTAMP="$(date '+%Y-%m-%d %H:%M:%S')"
+LOG_FILE="logs/bash_history.log"
+
+print_help() {
+cat << 'EOF'
+djangoproject-init — bootstrap Django development project
+
+Usage:
+  djangoproject-init [VERSION] [--dry-run]
+
+Arguments:
+  VERSION        Optional Django version selector:
+                 - 6        -> Django >=6.0,<7.0
+                 - 6.0      -> Django >=6.0,<6.1
+                 - (none)   -> Django >=6.0,<7.0 (default)
+
+Options:
+  --dry-run      Print actions without executing
+  --help         Show this help message
+
+Examples:
+  djangoproject-init
+  djangoproject-init 6
+  djangoproject-init 6.0
+  djangoproject-init 6 --dry-run
+EOF
+}
+
+run() {
+    if [[ "$DRY_RUN" == true ]]; then
+        echo "[dry-run] $*"
+    else
+        eval "$@"
+        echo "$@" >> "$LOG_FILE"
+    fi
+}
+
+# -------------------------
+# Argument parsing
+# -------------------------
+DJANGO_VERSION_ARG=""
+
+for arg in "$@"; do
+    case "$arg" in
+        --help)
+            print_help
+            exit 0
+            ;;
+        --dry-run)
+            DRY_RUN=true
+            ;;
+        *)
+            DJANGO_VERSION_ARG="$arg"
+            ;;
+    esac
+done
+
+# -------------------------
+# Django version resolution
+# -------------------------
+if [[ -z "$DJANGO_VERSION_ARG" ]]; then
+    DJANGO_SPEC="Django>=${DEFAULT_DJANGO_MAJOR}.0,<$((${DEFAULT_DJANGO_MAJOR}+1)).0"
+elif [[ "$DJANGO_VERSION_ARG" =~ ^[0-9]+$ ]]; then
+    DJANGO_SPEC="Django>=${DJANGO_VERSION_ARG}.0,<$((${DJANGO_VERSION_ARG}+1)).0"
+elif [[ "$DJANGO_VERSION_ARG" =~ ^[0-9]+\.[0-9]+$ ]]; then
+    MAJOR="${DJANGO_VERSION_ARG%%.*}"
+    MINOR="${DJANGO_VERSION_ARG##*.}"
+    DJANGO_SPEC="Django>=${MAJOR}.${MINOR},<${MAJOR}.$((MINOR+1))"
+else
+    echo "❌ Invalid Django version: $DJANGO_VERSION_ARG"
+    echo "Use --help to see valid formats."
+    exit 2
+fi
+
+echo "==> Using $DJANGO_SPEC"
+
+# -------------------------
+# Bootstrap process
+# -------------------------
+
+if [[ "$DRY_RUN" == false ]]; then
+    mkdir -p logs
+    echo "======================================================================" >> "$LOG_FILE"
+    echo " djangoproject-init run at [$TIMESTAMP]" >> "$LOG_FILE"
+    echo "======================================================================" >> "$LOG_FILE"
+fi
+
+run "mkdir -p backup logs server.conf/certs scripts"
+run "touch logs/.gitkeep server.conf/.gitkeep server.conf/certs/.gitkeep scripts/.gitkeep"
+
+run "python -m venv .venv"
+
+run "wget -P /tmp https://raw.githubusercontent.com/Dev-Op5/djangoproject-init/refs/heads/master/manage"
+run "chmod +x /tmp/manage"
+run "mv /tmp/manage .venv/bin/manage"
+
+run "source .venv/bin/activate"
+run "python -m pip install --upgrade pip"
+run "python -m pip install \"$DJANGO_SPEC\" python-decouple==3.8"
+
+
+# Defaults file
+# Create backup/restore configuration file
+run "cat > backup/db.conf.example << EOL
+db_host = localhost
+db_port = 3306
+db_user = root
+db_pass = yourpassword
+db_name = test
+db_charset = utf8mb4
+db_collation = utf8mb4_unicode_ci
+EOL"
+
+run "cat > backup/README.md << EOL
+Backup/Restore di folder ini spesifik untuk MySQL/MariaDB menggunakan CLI 'execute'.
+Sumber: https://github.com/Dev-Op5/mariadb-execute/
+
+Cara singkat instalasi:
+wget -P /tmp https://raw.githubusercontent.com/Dev-Op5/mariadb-execute/master/execute
+chmod +x /tmp/execute
+sudo mv /tmp/execute /usr/local/bin
+
+Cara singkat penggunaan CLI
+1. copy file db.conf.example ke db.conf
+2. sesuaikan variabel koneksi di dalam file db.conf berdasarkan setting DB kamu
+3. di folder 'backup', tes jalankan command: 'execute login'
+EOL"
+
+# Create template for nginx reverse proxy
+if [[ "$DRY_RUN" == true ]]; then
+run "echo 'create nginx reverse proxy configuration template'"
+else
+
+cat > server.conf/nginx.local.example << 'EOL'
+server {
+  listen                     80;
+  server_name                example.local;
+  return 301                 https://$server_name$request_uri;
+}
+
+server {
+  listen                     443 ssl;
+  http2                      on;
+  server_name                example.local;
+EOL
+
+CURRENT_DIR=$(pwd)
+cat >> server.conf/nginx.local.example << EOL
+  access_log                 ${CURRENT_DIR}/logs/access.log gzip;
+  error_log                  ${CURRENT_DIR}/logs/error.log notice;
+
+  ssl_certificate            ${CURRENT_DIR}/server.conf/certs/example.local.pem;
+  ssl_certificate_key        ${CURRENT_DIR}/server.conf/certs/example.local-key.pem;
+  include                    /etc/nginx/snippets/ssl-params.conf;
+  include                    /etc/nginx/snippets/headers.conf;
+
+  root                       ${CURRENT_DIR};
+EOL
+
+cat >> server.conf/nginx.local.example << 'EOL'
+  location / {
+    proxy_pass               http://127.0.0.1:8000;
+    error_page               502 = /502.html;
+    proxy_set_header         Host $host;
+    proxy_set_header         X-Real-IP $remote_addr;
+    proxy_set_header         X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header         X-Forwarded-Proto $scheme;
+    send_timeout             60;
+    client_max_body_size     100M;
+    client_body_buffer_size  100M;
+  }
+}
+EOL
+
+fi
+
+# Repo-level gitignore
+run "cat > .gitignore << 'EOL'
+.env
+.venv/
+backup/db.conf
+backup/*.7z
+logs/*.log
+server.conf/nginx.live.conf
+server.conf/nginx.local
+EOL"
+
+# Django project
+run ".venv/bin/django-admin startproject workspace"
+
+# Project-level gitignore
+run "cat > workspace/.gitignore << 'EOL'
+__pycache__/
+*.py[cod]
+db.sqlite3
+*.log
+.vscode/
+.idea/
+.coverage
+htmlcov/
+.pytest_cache/
+.DS_Store
+Thumbs.db
+EOL"
+
+# Tooling config
+run "cat > pyproject.toml << 'EOL'
+[tool.black]
+line-length = 88
+target-version = ['py312']
+
+[tool.isort]
+profile = 'black'
+line_length = 88
+EOL"
+
+run "cat > .flake8 << 'EOL'
+[flake8]
+max-line-length = 88
+extend-ignore = E203, W503
+exclude = .git,__pycache__,.env,.venv
+EOL"
+
+run "cat > pyrightconfig.json << 'EOL'
+{
+  \"typeCheckingMode\": \"standard\",
+  \"pythonVersion\": \"3.12\",
+  \"pythonPlatform\": \"Linux\",
+  \"venvPath\": \".\",
+  \"venv\": \".venv\",
+  \"exclude\": [
+    \"**/migrations\",
+    \"**/__pycache__\",
+    \"backup\",
+    \"logs\",
+    \"server.conf\",
+    \"scripts\"
+  ]
+}
+EOL"
+
+# Git init
+run "git init"
+run "git add .gitignore workspace/.gitignore"
+run "git commit -m 'init comit & .gitignore'"
+run "git add pyrightconfig.json pyproject.toml .flake8"
+run "git commit -m 'add python tooling config (black, isort, flake8 and LSP pyright)'"
+run "git add ."
+run "git commit -m 'init django project structure'"
+echo "✅ Django project initialized successfully."
+
+if [[ "$DRY_RUN" == false ]]; then
+    echo "======================================================================" >> "$LOG_FILE"
+    echo "✅ Django project initialized successfully." >> "$LOG_FILE"
+    echo "======================================================================" >> "$LOG_FILE"
+    echo "" >> "$LOG_FILE"
+fi
+
