@@ -3,7 +3,7 @@ set -euo pipefail
 
 # ==============================================
 # djangoproject-init
-# Initialize a cozy Django development repo
+# Bootstrap Django development project
 # 
 # scripted with :love: by eRQee (q@serverq.org)
 # ==============================================
@@ -20,13 +20,18 @@ cat << 'EOF'
 djangoproject-init — bootstrap Django development project
 
 Usage:
-  djangoproject-init [VERSION] [--dry-run]
+  djangoproject-init [VERSION] [TARGET_DIR] [--dry-run]
 
 Arguments:
   VERSION        Optional Django version selector:
                  - 6        -> Django >=6.0,<7.0
                  - 6.0      -> Django >=6.0,<6.1
                  - (none)   -> Django >=6.0,<7.0 (default)
+
+  TARGET_DIR     Optional target directory:
+                 - folder   -> create & use folder
+                 - .        -> use current directory
+                 - (none)   -> use current directory
 
 Options:
   --dry-run      Print actions without executing
@@ -35,7 +40,7 @@ Options:
 Examples:
   djangoproject-init
   djangoproject-init 6
-  djangoproject-init 6.0
+  djangoproject-init 6.0 folder_project
   djangoproject-init 6 --dry-run
 EOF
 }
@@ -53,6 +58,7 @@ run() {
 # Argument parsing
 # -------------------------
 DJANGO_VERSION_ARG=""
+TARGET_DIR="."
 
 for arg in "$@"; do
     case "$arg" in
@@ -64,7 +70,11 @@ for arg in "$@"; do
             DRY_RUN=true
             ;;
         *)
-            DJANGO_VERSION_ARG="$arg"
+            if [[ -z "$DJANGO_VERSION_ARG" ]]; then
+                DJANGO_VERSION_ARG="$arg"
+            else
+                TARGET_DIR="$arg"
+            fi
             ;;
     esac
 done
@@ -82,22 +92,37 @@ elif [[ "$DJANGO_VERSION_ARG" =~ ^[0-9]+\.[0-9]+$ ]]; then
     DJANGO_SPEC="Django>=${MAJOR}.${MINOR},<${MAJOR}.$((MINOR+1))"
 else
     echo "❌ Invalid Django version: $DJANGO_VERSION_ARG"
-    echo "Use --help to see valid formats."
     exit 2
 fi
 
 echo "==> Using $DJANGO_SPEC"
 
 # -------------------------
+# Target directory handling
+# -------------------------
+if [[ "$TARGET_DIR" != "." ]]; then
+    mkdir -p $TARGET_DIR
+    cd $TARGET_DIR
+fi
+
+# Directory must be empty
+if [[ -n "$(ls -A . 2>/dev/null)" ]]; then
+    echo "❌ Target directory is not empty: $(pwd)"
+    exit 3
+fi
+
+# -------------------------
 # Bootstrap process
 # -------------------------
-
 if [[ "$DRY_RUN" == false ]]; then
     mkdir -p logs
-    echo "======================================================================" >> "$LOG_FILE"
-    echo " djangoproject-init run at [$TIMESTAMP]" >> "$LOG_FILE"
-    echo "======================================================================" >> "$LOG_FILE"
+    {
+        echo "======================================================================"
+        echo " djangoproject-init run at [$TIMESTAMP]"
+        echo "======================================================================"
+    } >> "$LOG_FILE"
 fi
+
 
 run "mkdir -p backup logs server.conf/certs scripts"
 run "touch logs/.gitkeep server.conf/.gitkeep server.conf/certs/.gitkeep scripts/.gitkeep"
