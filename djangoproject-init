@@ -293,5 +293,18 @@ if [[ "$DRY_RUN" == false ]]; then
     echo "✅ Django project initialized successfully." >> "$LOG_FILE"
     echo "======================================================================" >> "$LOG_FILE"
     echo "" >> "$LOG_FILE"
+    echo ""
+    echo "================================================================================"
+    echo "NEXT STEPS, execute these command below inside your newly created '$TARGET_DIR' directory"
+    echo "================================================================================"
+    echo ""
+    echo "  source .venv/bin/activate"
+    echo "  cd workspaces"
+    echo "  manage git remote add origin <your git repository address>"
+    echo "  manage git push"
+    echo ""
+    echo "================================================================================"
+    echo "AND now you are ready to craft your awesome Django application!"
+   
 fi
 
