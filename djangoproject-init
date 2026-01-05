@@ -283,7 +283,7 @@ EOL"
 # Git init
 run "git init"
 run "git add .gitignore workspace/.gitignore"
-run "git commit -m 'init comit & .gitignore'"
+run "git commit -m 'init commit & .gitignore'"
 run "git add pyrightconfig.json pyproject.toml .flake8"
 run "git commit -m 'add python tooling config (black, isort, flake8 and LSP pyright)'"
 run "git add ."
