@@ -149,18 +149,20 @@ db_name = yourdatabasename
 EOL"
 
 run "cat > backup/README.md << EOL
-Backup/Restore di folder ini spesifik untuk PostgreSQL menggunakan CLI 'pg-execute'.
-Sumber: https://github.com/Dev-Op5/pg-execute/
+Backup/Restore in this folder is specific to PostgreSQL using the CLI 'pg-execute'.
+Source: https://github.com/Dev-Op5/pg-execute/
 
-Cara singkat instalasi:
+Quick installation:
 wget -P /tmp https://raw.githubusercontent.com/Dev-Op5/pg-execute/master/pg-execute
 chmod +x /tmp/pg-execute
 sudo mv /tmp/pg-execute /usr/local/bin
 
-Cara singkat penggunaan CLI
-1. jalankan command: 'pg-execute generate-config' untuk menghasilkan file db.conf
-2. sesuaikan variabel koneksi di dalam file db.conf berdasarkan setting DB kamu
-3. di folder 'backup', tes jalankan command: 'pg-execute login'
+CLI usage test example:
+1. Run the command: 'pg-execute generate-config' to generate the db.conf file.
+2. Adjust the connection variables in the db.conf file based on your DB settings.
+3. In the 'backup' folder, test by running the command: 'pg-execute login'
+
+If you can enter the psql console, then it works!
 EOL"
 
 run "wget -P /tmp https://raw.githubusercontent.com/Dev-Op5/pg-execute/refs/heads/master/pg-execute"
