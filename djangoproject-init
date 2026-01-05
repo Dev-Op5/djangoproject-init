@@ -124,8 +124,8 @@ if [[ "$DRY_RUN" == false ]]; then
 fi
 
 
-run "mkdir -p backup logs server.conf/certs scripts"
-run "touch logs/.gitkeep server.conf/.gitkeep server.conf/certs/.gitkeep scripts/.gitkeep"
+run "mkdir -p backup backup/routines logs server.conf/certs scripts"
+run "touch logs/.gitkeep server.conf/.gitkeep server.conf/certs/.gitkeep scripts/.gitkeep backup/routines/.gitkeep"
 
 run "python -m venv .venv"
 
@@ -135,35 +135,37 @@ run "mv /tmp/manage .venv/bin/manage"
 
 run "source .venv/bin/activate"
 run "python -m pip install --upgrade pip"
-run "python -m pip install \"$DJANGO_SPEC\" python-decouple==3.8"
+run "python -m pip install \"$DJANGO_SPEC\" python-decouple"
 
 
 # Defaults file
 # Create backup/restore configuration file
 run "cat > backup/db.conf.example << EOL
 db_host = localhost
-db_port = 3306
-db_user = root
-db_pass = yourpassword
-db_name = test
-db_charset = utf8mb4
-db_collation = utf8mb4_unicode_ci
+db_port = 5432
+db_user = postgres
+db_pass = changeme
+db_name = yourdatabasename
 EOL"
 
 run "cat > backup/README.md << EOL
-Backup/Restore di folder ini spesifik untuk MySQL/MariaDB menggunakan CLI 'execute'.
-Sumber: https://github.com/Dev-Op5/mariadb-execute/
+Backup/Restore di folder ini spesifik untuk PostgreSQL menggunakan CLI 'pg-execute'.
+Sumber: https://github.com/Dev-Op5/pg-execute/
 
 Cara singkat instalasi:
-wget -P /tmp https://raw.githubusercontent.com/Dev-Op5/mariadb-execute/master/execute
-chmod +x /tmp/execute
-sudo mv /tmp/execute /usr/local/bin
+wget -P /tmp https://raw.githubusercontent.com/Dev-Op5/pg-execute/master/pg-execute
+chmod +x /tmp/pg-execute
+sudo mv /tmp/pg-execute /usr/local/bin
 
 Cara singkat penggunaan CLI
-1. copy file db.conf.example ke db.conf
+1. jalankan command: 'pg-execute generate-config' untuk menghasilkan file db.conf
 2. sesuaikan variabel koneksi di dalam file db.conf berdasarkan setting DB kamu
-3. di folder 'backup', tes jalankan command: 'execute login'
+3. di folder 'backup', tes jalankan command: 'pg-execute login'
 EOL"
+
+run "wget -P /tmp https://raw.githubusercontent.com/Dev-Op5/pg-execute/refs/heads/master/pg-execute"
+run "chmod +x /tmp/pg-execute"
+run "mv /tmp/pg-execute .venv/bin/pg-execute"
 
 # Create template for nginx reverse proxy
 if [[ "$DRY_RUN" == true ]]; then
