@@ -5,7 +5,7 @@ set -euo pipefail
 # djangoproject-init
 # Bootstrap Django development project
 # 
-# scripted with :love: by eRQee (q@serverq.org)
+# scripted with ❤️ by eRQee (q@serverq.org)
 # ==============================================
 
 SCRIPT_NAME="$(basename "$0")"
@@ -308,7 +308,7 @@ if [[ "$DRY_RUN" == false ]]; then
     echo "  manage git push"
     echo ""
     echo "================================================================================"
-    echo "AND now you are ready to craft your awesome Django application!"
+    echo "AND now you are ready to craft your awesome Django application! ❤️"
    
 fi
 
