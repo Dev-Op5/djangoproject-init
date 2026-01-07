@@ -135,7 +135,7 @@ run "mv /tmp/manage .venv/bin/manage"
 
 run "source .venv/bin/activate"
 run "python -m pip install --upgrade pip"
-run "python -m pip install \"$DJANGO_SPEC\" python-decouple"
+run "python -m pip install \"$DJANGO_SPEC\" django-stubs django-stubs-ext python-decouple "
 
 
 # Defaults file
@@ -171,7 +171,7 @@ run "mv /tmp/pg-execute .venv/bin/pg-execute"
 
 # Create template for nginx reverse proxy
 if [[ "$DRY_RUN" == true ]]; then
-run "echo 'create nginx reverse proxy configuration template'"
+run "echo 'create nginx reverse proxy configuration template in server.conf/nginx.local.example'"
 else
 
 cat > server.conf/nginx.local.example << 'EOL'
@@ -266,9 +266,12 @@ EOL"
 
 run "cat > pyrightconfig.json << 'EOL'
 {
-  \"typeCheckingMode\": \"standard\",
-  \"pythonVersion\": \"3.12\",
+  \"pythonVersion\": \"3.13\",
   \"pythonPlatform\": \"Linux\",
+  \"typeCheckingMode\": \"standard\",
+  \"reportUnknownMemberType\": false,
+  \"reportUnknownVariableType\": false,
+  \"useLibraryCodeForTypes\": true,
   \"venvPath\": \".\",
   \"venv\": \".venv\",
   \"exclude\": [
