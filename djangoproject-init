@@ -315,7 +315,7 @@ run "cat > README.md << 'EOL'
 
 3. Use the \`manage\` command to run everything that \`python3 manage.py\` did.
    Also, use the \`manage\` command to run pip installation, eg: \`manage pip install some-python-package\`
-   By using that, you'll have a command forensic which you can review at \`logs/bash_history.log\`
+   ✅ By using that, you'll have a command forensic which you can review at \`logs/bash_history.log\`
 
 4. In order to make LSP-pyright more intelligent, adjust this file: workspace/workspace/settings.py
    a) add these lines in the import declaration:
