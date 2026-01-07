@@ -101,8 +101,8 @@ echo "==> Using $DJANGO_SPEC"
 # Target directory handling
 # -------------------------
 if [[ "$TARGET_DIR" != "." ]]; then
-    mkdir -p $TARGET_DIR
-    cd $TARGET_DIR
+    mkdir -p "$TARGET_DIR"
+    cd "$TARGET_DIR"
 fi
 
 # Directory must be empty
@@ -129,7 +129,7 @@ run "touch logs/.gitkeep server.conf/.gitkeep server.conf/certs/.gitkeep scripts
 
 run "python -m venv .venv"
 
-run "wget -P /tmp https://raw.githubusercontent.com/Dev-Op5/djangoproject-init/refs/heads/master/manage"
+run "curl -fsSL https://raw.githubusercontent.com/Dev-Op5/djangoproject-init/refs/heads/master/manage -o /tmp/manage"
 run "chmod +x /tmp/manage"
 run "mv /tmp/manage .venv/bin/manage"
 
@@ -153,7 +153,7 @@ Backup/Restore in this folder is specific to PostgreSQL using the CLI 'pg-execut
 Source: https://github.com/Dev-Op5/pg-execute/
 
 Quick installation:
-wget -P /tmp https://raw.githubusercontent.com/Dev-Op5/pg-execute/master/pg-execute
+curl -fsSL https://raw.githubusercontent.com/Dev-Op5/pg-execute/master/pg-execute -o /tmp/pg-execute
 chmod +x /tmp/pg-execute
 sudo mv /tmp/pg-execute /usr/local/bin
 
@@ -165,7 +165,7 @@ CLI usage test example:
 If you can enter the psql console, then it works!
 EOL"
 
-run "wget -P /tmp https://raw.githubusercontent.com/Dev-Op5/pg-execute/refs/heads/master/pg-execute"
+run "curl -fsSL https://raw.githubusercontent.com/Dev-Op5/pg-execute/master/pg-execute -o /tmp/pg-execute"
 run "chmod +x /tmp/pg-execute"
 run "mv /tmp/pg-execute .venv/bin/pg-execute"
 
@@ -246,6 +246,14 @@ htmlcov/
 Thumbs.db
 EOL"
 
+# default .env.example
+run "cat > workspace/.env.example << 'EOL'
+DEBUG=True
+SECRET_KEY=changeme
+ALLOWED_HOSTS=localhost,127.0.0.1
+DATABASE_URL=postgres://user:pass@localhost:5432/dbname
+EOL"
+
 # Tooling config
 run "cat > pyproject.toml << 'EOL'
 [tool.black]
@@ -285,11 +293,49 @@ run "cat > pyrightconfig.json << 'EOL'
 }
 EOL"
 
+run "cat > mypy.ini << 'EOL'
+[mypy]
+python_version = 3.12
+plugins = mypy_django_plugin.main
+ignore_missing_imports = true
+
+[mypy.plugins.django-stubs]
+django_settings_module = workspace.settings
+EOL"
+
+run "cat > README.md << 'EOL'
+# Welcome to your Next Awesome Django Project
+
+## Development Tips
+
+1. Always change directory to the \`workspace\` folder.
+2. Always activate the python virtual environment by run this command once:
+
+   \`source ../.venv/bin/activate\`
+
+3. Use the \`manage\` command to run everything that \`python3 manage.py\` did.
+   Also, use the \`manage\` command to run pip installation, eg: \`manage pip install some-python-package\`
+   By using that, you'll have a command forensic which you can review at \`logs/bash_history.log\`
+
+4. In order to make LSP-pyright more intelligent, adjust this file: workspace/workspace/settings.py
+   a) add these lines in the import declaration:
+
+   \`\`\`
+      import django_stubs_ext
+      django_stubs_ext.monkeypatch()
+   \`\`\`
+
+   b) in \`INSTALLED_APPS\` ⇒ add: \`\"django_stubs_ext\" \`
+   
+5. ⚠️ If you plan to use a custom User model, define it BEFORE the first migrate.
+
+EOL"
+
 # Git init
 run "git init"
 run "git add .gitignore workspace/.gitignore"
 run "git commit -m '[init] commit & .gitignore'"
-run "git add pyrightconfig.json pyproject.toml .flake8"
+run "git add pyrightconfig.json pyproject.toml .flake8 mypi.ini"
 run "git commit -m '[init] python tooling config (black, isort, flake8 and LSP pyright)'"
 run "git add ."
 run "git commit -m '[init] django project structure'"
@@ -305,13 +351,18 @@ if [[ "$DRY_RUN" == false ]]; then
     echo "NEXT STEPS, execute these command below inside your newly created '$TARGET_DIR' directory"
     echo "================================================================================"
     echo ""
-    echo "  source .venv/bin/activate"
     echo "  cd workspaces"
+    echo "  source ../.venv/bin/activate"
     echo "  manage git remote add origin <your git repository address>"
     echo "  manage git push"
     echo ""
     echo "================================================================================"
     echo "AND now you are ready to craft your awesome Django application! ❤️"
+    echo "================================================================================"    
+    echo ""
    
+cat README.md
+ 
 fi
+
 
