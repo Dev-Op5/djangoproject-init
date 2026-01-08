@@ -11,6 +11,7 @@ set -euo pipefail
 SCRIPT_NAME="$(basename "$0")"
 DEFAULT_DJANGO_MAJOR=6
 DRY_RUN=false
+WORKSPACE_DIR=workspace
 
 TIMESTAMP="$(date '+%Y-%m-%d %H:%M:%S')"
 LOG_FILE="logs/bash_history.log"
@@ -20,28 +21,32 @@ cat << 'EOF'
 djangoproject-init — bootstrap Django development project
 
 Usage:
-  djangoproject-init [VERSION] [TARGET_DIR] [--dry-run]
+  djangoproject-init [TARGET_DIR] --version=[VERSION] [--dry-run | --help]
 
 Arguments:
+  TARGET_DIR     Optional target directory:
+                 - folder   -> create & use folder
+                 - .        -> use current directory
+                 - (none)   -> use default "new.djangoproject" folder
+                 
   VERSION        Optional Django version selector:
                  - 6        -> Django >=6.0,<7.0
                  - 6.0      -> Django >=6.0,<6.1
                  - (none)   -> Django >=6.0,<7.0 (default)
 
-  TARGET_DIR     Optional target directory:
-                 - folder   -> create & use folder
-                 - .        -> use current directory
-                 - (none)   -> use current directory
 
 Options:
   --dry-run      Print actions without executing
   --help         Show this help message
 
+
 Examples:
   djangoproject-init
-  djangoproject-init 6
-  djangoproject-init 6.0 folder_project
-  djangoproject-init 6 --dry-run
+  djangoproject-init <directory>
+  djangoproject-init <directory> --version=6.0
+
+  djangoproject-init --dry-run     # to show the command which will be executed (no changes made)
+  djangoproject-init --help        # to show this help
 EOF
 }
 
@@ -57,8 +62,11 @@ run() {
 # -------------------------
 # Argument parsing
 # -------------------------
-DJANGO_VERSION_ARG=""
-TARGET_DIR="."
+DEFAULT_VERSION="6.0"
+DEFAULT_DIR="new.djangoproject"
+
+TARGET_DIR=""
+DJANGO_VERSION="$DEFAULT_VERSION"
 
 for arg in "$@"; do
     case "$arg" in
@@ -69,29 +77,43 @@ for arg in "$@"; do
         --dry-run)
             DRY_RUN=true
             ;;
+        --version=*)
+            DJANGO_VERSION="${arg#*=}"
+            ;;
+        -*)
+            echo "❌ Unknown option: $arg"
+            exit 2
+            ;;
         *)
-            if [[ -z "$DJANGO_VERSION_ARG" ]]; then
-                DJANGO_VERSION_ARG="$arg"
-            else
+            if [[ -z "$TARGET_DIR" ]]; then
                 TARGET_DIR="$arg"
+            else
+                echo "❌ Too many arguments"
+                exit 2
             fi
             ;;
     esac
 done
 
+# defaults
+if [[ -z "$TARGET_DIR" ]]; then
+    TARGET_DIR="$DEFAULT_DIR"
+fi
+
+
 # -------------------------
 # Django version resolution
 # -------------------------
-if [[ -z "$DJANGO_VERSION_ARG" ]]; then
+if [[ -z "$DJANGO_VERSION" ]]; then
     DJANGO_SPEC="Django>=${DEFAULT_DJANGO_MAJOR}.0,<$((${DEFAULT_DJANGO_MAJOR}+1)).0"
-elif [[ "$DJANGO_VERSION_ARG" =~ ^[0-9]+$ ]]; then
-    DJANGO_SPEC="Django>=${DJANGO_VERSION_ARG}.0,<$((${DJANGO_VERSION_ARG}+1)).0"
-elif [[ "$DJANGO_VERSION_ARG" =~ ^[0-9]+\.[0-9]+$ ]]; then
-    MAJOR="${DJANGO_VERSION_ARG%%.*}"
-    MINOR="${DJANGO_VERSION_ARG##*.}"
+elif [[ "$DJANGO_VERSION" =~ ^[0-9]+$ ]]; then
+    DJANGO_SPEC="Django>=${DJANGO_VERSION}.0,<$((${DJANGO_VERSION}+1)).0"
+elif [[ "$DJANGO_VERSION" =~ ^[0-9]+\.[0-9]+$ ]]; then
+    MAJOR="${DJANGO_VERSION%%.*}"
+    MINOR="${DJANGO_VERSION##*.}"
     DJANGO_SPEC="Django>=${MAJOR}.${MINOR},<${MAJOR}.$((MINOR+1))"
 else
-    echo "❌ Invalid Django version: $DJANGO_VERSION_ARG"
+    echo "❌ Invalid Django version: $DJANGO_VERSION"
     exit 2
 fi
 
@@ -100,16 +122,23 @@ echo "==> Using $DJANGO_SPEC"
 # -------------------------
 # Target directory handling
 # -------------------------
-if [[ "$TARGET_DIR" != "." ]]; then
+echo "==> Target directory: $TARGET_DIR"
+echo "==> Django version   : $DJANGO_VERSION"
+
+if [[ "$TARGET_DIR" == "." ]]; then
+    if [[ -n "$(ls -A . 2>/dev/null)" ]]; then
+        echo "❌ Current directory is not empty"
+        exit 3
+    fi
+else
+    if [[ -e "$TARGET_DIR" ]]; then
+        echo "❌ Directory already exists: $TARGET_DIR"
+        exit 3
+    fi
     mkdir -p "$TARGET_DIR"
     cd "$TARGET_DIR"
 fi
 
-# Directory must be empty
-if [[ -n "$(ls -A . 2>/dev/null)" ]]; then
-    echo "❌ Target directory is not empty: $(pwd)"
-    exit 3
-fi
 
 # -------------------------
 # Bootstrap process
@@ -229,10 +258,11 @@ server.conf/nginx.local
 EOL"
 
 # Django project
-run ".venv/bin/django-admin startproject workspace"
+run ".venv/bin/django-admin startproject $WORKSPACE_DIR"
+run "mv $WORKSPACE_DIR src"
 
 # Project-level gitignore
-run "cat > workspace/.gitignore << 'EOL'
+run "cat > src/.gitignore << 'EOL'
 __pycache__/
 *.py[cod]
 db.sqlite3
@@ -247,7 +277,7 @@ Thumbs.db
 EOL"
 
 # default .env.example
-run "cat > workspace/.env.example << 'EOL'
+run "cat > src/.env.example << 'EOL'
 DEBUG=True
 SECRET_KEY=changeme
 ALLOWED_HOSTS=localhost,127.0.0.1
@@ -317,7 +347,7 @@ run "cat > README.md << 'EOL'
    Also, use the \`manage\` command to run pip installation, eg: \`manage pip install some-python-package\`
    ✅ By using that, you'll have a command forensic which you can review at \`logs/bash_history.log\`
 
-3. In order to make LSP-pyright more intelligent, adjust this file: workspace/workspace/settings.py
+3. In order to make LSP-pyright more intelligent, adjust this file: src/$WORKSPACE_DIR/settings.py
    a) add these lines in the import declaration:
 
    \`\`\`
@@ -327,13 +357,13 @@ run "cat > README.md << 'EOL'
 
    b) in \`INSTALLED_APPS\` ⇒ add: \`\"django_stubs_ext\"\`
    
-4. ⚠️ If you plan to use a custom User model, define it BEFORE the first migrate.
+4. ⚠️  If you plan to use a custom User model, define it BEFORE the first migrate.
 
 EOL"
 
 # Git init
 run "git init"
-run "git add .gitignore workspace/.gitignore"
+run "git add .gitignore src/.gitignore"
 run "git commit -m '[init] commit & .gitignore'"
 run "git add pyrightconfig.json pyproject.toml .flake8 mypy.ini"
 run "git commit -m '[init] python tooling config (black, isort, flake8 and LSP pyright)'"
@@ -351,6 +381,7 @@ if [[ "$DRY_RUN" == false ]]; then
     echo "NEXT STEPS, execute these command below inside your newly created '$TARGET_DIR' directory"
     echo "================================================================================"
     echo ""
+    echo "  cd \"$TARGET_DIR\""
     echo "  source .venv/bin/activate"
     echo "  cd workspaces"
     echo "  manage git remote add origin <your git repository address>"
