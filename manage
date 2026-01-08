@@ -80,6 +80,64 @@ SUBCOMMAND="${1:-}"
 ORIGINAL_CWD="$PWD"
 
 case "$SUBCOMMAND" in
+		toc)
+		    cat << 'EOF'
+manage — django command gateway for artisan
+================================ : scripted with ❤️ by eRQee (q@serverq.org)
+
+Inspector commands:
+  manage toc            Show this table of contents
+  manage tree           Showw project directory structure
+  manage history        Show the audit log (default: 20 lines)
+  manage history 200    Show the 200 lines of audit log
+
+Pass-through commands:
+  manage git <args>     Run git commands in repo scope
+  manage pip <args>     Run pip using project virtualenv
+
+Django commands:
+  manage runserver
+  manage migrate
+  manage makemigrations
+  manage createsuperuser
+  manage shell
+  ...and all standard Django manage.py commands
+
+Notes:
+- Django commands are always executed from the 'src/' directory
+- git and pip commands are executed from current working directory
+- all commands are audited in logs/bash_history.log
+EOF
+		    EXIT_CODE=0
+		    ;;
+
+		history)
+				shift
+
+				DEFAULT_LINES=20
+				LINES="$DEFAULT_LINES"
+
+				if [[ $# -ge 1 ]]; then
+				    if [[ "$1" =~ ^[0-9]+$ ]]; then
+				        LINES="$1"
+				    else
+				        echo "❌ invalid parameter: $1"
+				        echo "   usage: manage history [number_of_lines]"
+				        EXIT_CODE=1
+				        break
+				    fi
+				fi
+
+				if [[ ! -f "$LOG_FILE" ]]; then
+				    echo "❌ history log not found: $LOG_FILE"
+				    EXIT_CODE=1
+				    break
+				fi
+
+				tail -n "$LINES" "$LOG_FILE"
+				EXIT_CODE=$?
+				;;
+
     git)
         shift
         git "$@"
