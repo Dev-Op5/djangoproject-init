@@ -2,9 +2,11 @@
 set -u  # manually handled the exit code
 
 # =================================================================
-# manage — unified command wrapper with audit logging
+# manage — django command gateway for artisan
+# -----------------------------------------------------------------
+# an unified command wrapper with audit logging
 # for Django development project initiated by djangoproject-init
-# 
+# -----------------------------------------------------------------
 # scripted with ❤️ by eRQee (q@serverq.org)
 # =================================================================
 
@@ -82,12 +84,13 @@ ORIGINAL_CWD="$PWD"
 case "$SUBCOMMAND" in
 		toc)
 		    cat << 'EOF'
+=============================================================================
 manage — django command gateway for artisan
 ================================ : scripted with ❤️ by eRQee (q@serverq.org)
 
 Inspector commands:
   manage toc            Show this table of contents
-  manage tree           Showw project directory structure
+  manage tree           Show project directory structure
   manage history        Show the audit log (default: 20 lines)
   manage history 200    Show the 200 lines of audit log
 

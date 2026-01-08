@@ -359,6 +359,8 @@ run "cat > README.md << 'EOL'
    
 4. ⚠️  If you plan to use a custom User model, define it BEFORE the first migrate.
 
+5. Also run this: \`manage toc\` -- to see the things can do with those **django command gateway for artisan**
+
 EOL"
 
 # Git init
