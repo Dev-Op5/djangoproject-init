@@ -304,20 +304,20 @@ django_settings_module = workspace.settings
 EOL"
 
 run "cat > README.md << 'EOL'
-# Welcome to your Next Awesome Django Project
+#  Now you're ready to craft an awesome Django application! ❤️
+================================================================================
 
-## Development Tips
+## Dev Tips
 
-1. Always change directory to the \`workspace\` folder.
-2. Always activate the python virtual environment by run this command once:
+1. Always activate the python virtual environment by run this command once:
 
-   \`source ../.venv/bin/activate\`
+   \`source .venv/bin/activate\`
 
-3. Use the \`manage\` command to run everything that \`python3 manage.py\` did.
+2. Use the \`manage\` command to run everything that \`python3 manage.py\` did.
    Also, use the \`manage\` command to run pip installation, eg: \`manage pip install some-python-package\`
    ✅ By using that, you'll have a command forensic which you can review at \`logs/bash_history.log\`
 
-4. In order to make LSP-pyright more intelligent, adjust this file: workspace/workspace/settings.py
+3. In order to make LSP-pyright more intelligent, adjust this file: workspace/workspace/settings.py
    a) add these lines in the import declaration:
 
    \`\`\`
@@ -325,9 +325,9 @@ run "cat > README.md << 'EOL'
       django_stubs_ext.monkeypatch()
    \`\`\`
 
-   b) in \`INSTALLED_APPS\` ⇒ add: \`\"django_stubs_ext\" \`
+   b) in \`INSTALLED_APPS\` ⇒ add: \`\"django_stubs_ext\"\`
    
-5. ⚠️ If you plan to use a custom User model, define it BEFORE the first migrate.
+4. ⚠️ If you plan to use a custom User model, define it BEFORE the first migrate.
 
 EOL"
 
@@ -351,15 +351,12 @@ if [[ "$DRY_RUN" == false ]]; then
     echo "NEXT STEPS, execute these command below inside your newly created '$TARGET_DIR' directory"
     echo "================================================================================"
     echo ""
+    echo "  source .venv/bin/activate"
     echo "  cd workspaces"
-    echo "  source ../.venv/bin/activate"
     echo "  manage git remote add origin <your git repository address>"
     echo "  manage git push"
     echo ""
     echo "================================================================================"
-    echo "AND now you are ready to craft your awesome Django application! ❤️"
-    echo "================================================================================"    
-    echo ""
    
 cat README.md
  
