@@ -1,39 +1,66 @@
 #!/usr/bin/env bash
+set -u  # manually handled the exit code
 
-set -u  # menangani exit code sendiri
-
-# =========================================================
+# =================================================================
 # manage — unified command wrapper with audit logging
-# =========================================================
+# for Django development project initiated by djangoproject-init
+# 
+# scripted with ❤️ by eRQee (q@serverq.org)
+# =================================================================
 
-# harus dijalankan dari directory yang berisi manage.py
-if [[ ! -f "manage.py" ]]; then
-    echo "❌ manage.py tidak ditemukan di current working directory"
-    echo "   Pastikan lo menjalankan perintah ini dari folder Django project (workspace/)"
-    exit 1
-fi
+SCRIPT_PATH="$(realpath "$0")"
+VENV_BIN="$(dirname "$SCRIPT_PATH")"
+VENV_ROOT="$(realpath "$VENV_BIN/..")"
+ROOT_REPO="$(realpath "$VENV_ROOT/..")"
+SRC_DIR="$ROOT_REPO/src"
 
-# python & pip dari venv
-VENV_BIN="$(dirname "$(realpath "$0")")"
 VENV_PYTHON="$VENV_BIN/python"
 VENV_PIP="$VENV_BIN/pip"
 
+# ---------------------------------------------------------
+# sanity checks
+# ---------------------------------------------------------
 if [[ ! -x "$VENV_PYTHON" ]]; then
-    echo "❌ Python venv tidak ditemukan"
+    echo "❌ Python binary not found in virtualenv"
     exit 1
 fi
 
-# lokasi log (relative ke workspace/)
-LOG_FILE="../logs/bash_history.log"
+if [[ ! -d "$SRC_DIR" || ! -f "$SRC_DIR/manage.py" ]]; then
+    echo "❌ invalid project structure."
+    echo "   Expected: $SRC_DIR/manage.py"
+    exit 1
+fi
+
+# CWD harus berada di dalam ROOT_REPO
+CWD="$(realpath "$PWD")"
+case "$CWD" in
+    "$ROOT_REPO"/*) ;;
+    "$ROOT_REPO") ;;
+    *)
+        echo "❌ the 'manage' command cannot be run from outside the project scope."
+        echo "   Root project: $ROOT_REPO"
+        exit 1
+        ;;
+esac
+
+# ---------------------------------------------------------
+# logging
+# ---------------------------------------------------------
+LOG_FILE="$ROOT_REPO/logs/bash_history.log"
 mkdir -p "$(dirname "$LOG_FILE")"
+
+TIMESTAMP="$(date '+%Y-%m-%d %H:%M:%S')"
+FULL_CMD="manage $*"
+EXIT_CODE=0
+GIT_STATE=""
 
 # warning jika venv belum aktif
 if [[ -z "${VIRTUAL_ENV:-}" ]]; then
-    echo "⚠️  Virtualenv belum aktif (VIRTUAL_ENV tidak terdeteksi)"
-    echo "   Command tetap dijalankan via .venv"
+    echo "⚠️  Virtualenv is inactive (VIRTUAL_ENV not detected)"
+    echo "   Command will still executed via .venv"
 fi
 
-# util: cek working tree git (CLEAN / DIRTY / N/A)
+# util: cek working tree git
 git_working_tree_state() {
     if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
         if git diff-index --quiet HEAD -- 2>/dev/null; then
@@ -46,14 +73,11 @@ git_working_tree_state() {
     fi
 }
 
-# ambil subcommand pertama
+# ---------------------------------------------------------
+# command dispatch
+# ---------------------------------------------------------
 SUBCOMMAND="${1:-}"
-
-TIMESTAMP="$(date '+%Y-%m-%d %H:%M:%S')"
-FULL_CMD="manage $*"
-
-EXIT_CODE=0
-GIT_STATE=""
+ORIGINAL_CWD="$PWD"
 
 case "$SUBCOMMAND" in
     git)
@@ -66,18 +90,27 @@ case "$SUBCOMMAND" in
         "$VENV_PIP" "$@"
         EXIT_CODE=$?
         ;;
+    tree)
+    		if ! command -v tree >/dev/null 2>&1; then
+		      echo "❌ 'tree' command not found"
+		      echo "   install it first by run: sudo apt install tree"
+		      EXIT_CODE=1
+		    else
+		      tree "$ROOT_REPO"
+		      EXIT_CODE=$?
+		    fi
+        ;;
     *)
+        cd "$SRC_DIR"
         "$VENV_PYTHON" manage.py "$@"
         EXIT_CODE=$?
+        cd "$ORIGINAL_CWD"
         ;;
 esac
 
-# =========================================================
-# logging hasil
-# - working tree dicatat HANYA jika:
-#   * command = git / pip
-#   * exit code ≠ 0
-# =========================================================
+# ---------------------------------------------------------
+# audit logging
+# ---------------------------------------------------------
 if [[ $EXIT_CODE -eq 0 ]]; then
     echo "[$TIMESTAMP] [OK]   $FULL_CMD" >> "$LOG_FILE"
 else
