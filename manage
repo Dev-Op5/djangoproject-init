@@ -157,7 +157,7 @@ EOF
 		      echo "   install it first by run: sudo apt install tree"
 		      EXIT_CODE=1
 		    else
-		      tree "$ROOT_REPO"
+		      tree -a -I '.git|node_modules|__pycache__|.venv' "$ROOT_REPO"
 		      EXIT_CODE=$?
 		    fi
         ;;
