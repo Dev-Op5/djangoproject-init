@@ -153,8 +153,8 @@ if [[ "$DRY_RUN" == false ]]; then
 fi
 
 
-run "mkdir -p backup backup/routines logs server.conf/certs scripts"
-run "touch logs/.gitkeep server.conf/.gitkeep server.conf/certs/.gitkeep scripts/.gitkeep backup/routines/.gitkeep"
+run "mkdir -p backup backup/routines logs server.conf/certs scripts filestorage"
+run "touch logs/.gitkeep server.conf/.gitkeep server.conf/certs/.gitkeep scripts/.gitkeep backup/routines/.gitkeep filestorage/.gitkeep"
 
 run "python -m venv .venv"
 
@@ -250,11 +250,16 @@ fi
 run "cat > .gitignore << 'EOL'
 .env
 .venv/
-backup/db.conf
-backup/*.7z
-logs/*.log
-server.conf/nginx.live.conf
-server.conf/nginx.local
+/backup/db.conf
+/backup/*.7z
+/logs/*.log
+/server.conf/nginx.live.conf
+/server.conf/nginx.local
+/filestorage/*
+!/filestorage/.gitkeep
+*.log
+.DS_Store
+Thumbs.db
 EOL"
 
 # Django project
@@ -272,16 +277,23 @@ db.sqlite3
 .coverage
 htmlcov/
 .pytest_cache/
-.DS_Store
-Thumbs.db
 EOL"
 
 # default .env.example
 run "cat > src/.env.example << 'EOL'
-DEBUG=True
-SECRET_KEY=changeme
-ALLOWED_HOSTS=localhost,127.0.0.1
-DATABASE_URL=postgres://user:pass@localhost:5432/dbname
+EMAIL_HOST=mail.yourmailserver.com
+EMAIL_PORT=465
+EMAIL_USE_SSL=true
+EMAIL_USE_TLS=false
+EMAIL_HOST_USER=no-reply@yourmailserver.com
+EMAIL_HOST_PASSWORD=yourpassword
+DEFAULT_FROM_EMAIL=Notification Services <no-reply@yourmailserver.com>
+
+DB_NAME=yourdatabasename
+DB_USER=yourdatabaseuser
+DB_PASSWORD=yourdatabasepassword
+DB_HOST=127.0.0.1
+DB_PORT=5432
 EOL"
 
 # Tooling config
