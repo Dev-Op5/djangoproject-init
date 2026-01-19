@@ -158,15 +158,17 @@ run "touch logs/.gitkeep server.conf/.gitkeep server.conf/certs/.gitkeep backup/
 
 run "python -m venv .venv"
 
+UTILS_DIR="$(realpath utils)"
+
 run "curl -fsSL https://raw.githubusercontent.com/Dev-Op5/djangoproject-init/refs/heads/master/manage -o /tmp/manage"
 run "chmod +x /tmp/manage"
-run "mv /tmp/manage utils/manage"
-run "ln -s utils/manage .venv/bin/manage"
+run "mv /tmp/manage \"$UTILS_DIR\"/manage"
+run "ln -rs \"$UTILS_DIR\"/manage .venv/bin/manage"
 
 run "curl -fsSL https://raw.githubusercontent.com/Dev-Op5/pg-execute/master/pg-execute -o /tmp/pg-execute"
 run "chmod +x /tmp/pg-execute"
-run "mv /tmp/pg-execute utils/pg-execute"
-run "ln -s utils/pg-execute .venv/bin/pg-execute"
+run "mv /tmp/pg-execute \"$UTILS_DIR\"/pg-execute"
+run "ln -rs \"$UTILS_DIR\"/pg-execute .venv/bin/pg-execute"
 
 run "source .venv/bin/activate"
 run "python -m pip install --upgrade pip"
