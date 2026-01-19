@@ -153,14 +153,20 @@ if [[ "$DRY_RUN" == false ]]; then
 fi
 
 
-run "mkdir -p backup backup/routines logs server.conf/certs scripts filestorage"
-run "touch logs/.gitkeep server.conf/.gitkeep server.conf/certs/.gitkeep scripts/.gitkeep backup/routines/.gitkeep filestorage/.gitkeep"
+run "mkdir -p backup backup/routines logs server.conf/certs spec theming/{static,static.collect,template-overrides} uploads utils"
+run "touch logs/.gitkeep server.conf/.gitkeep server.conf/certs/.gitkeep backup/routines/.gitkeep spec/.gitkeep theming/static/.gitkeep theming/static.collect/.gitkeep theming/template-overrides/.gitkeep uploads/.gitkeep utils/.gitkeep"
 
 run "python -m venv .venv"
 
 run "curl -fsSL https://raw.githubusercontent.com/Dev-Op5/djangoproject-init/refs/heads/master/manage -o /tmp/manage"
 run "chmod +x /tmp/manage"
-run "mv /tmp/manage .venv/bin/manage"
+run "mv /tmp/manage utils/manage"
+run "ln -s utils/manage .venv/bin/manage"
+
+run "curl -fsSL https://raw.githubusercontent.com/Dev-Op5/pg-execute/master/pg-execute -o /tmp/pg-execute"
+run "chmod +x /tmp/pg-execute"
+run "mv /tmp/pg-execute utils/pg-execute"
+run "ln -s utils/pg-execute .venv/bin/pg-execute"
 
 run "source .venv/bin/activate"
 run "python -m pip install --upgrade pip"
@@ -178,13 +184,9 @@ db_name = yourdatabasename
 EOL"
 
 run "cat > backup/README.md << EOL
-Backup/Restore in this folder is specific to PostgreSQL using the CLI 'pg-execute'.
-Source: https://github.com/Dev-Op5/pg-execute/
+Backup/Restore in this folder is specific to PostgreSQL using the CLI 'pg-execute'. Available on your \`utils\` folder.
 
-Quick installation:
-curl -fsSL https://raw.githubusercontent.com/Dev-Op5/pg-execute/master/pg-execute -o /tmp/pg-execute
-chmod +x /tmp/pg-execute
-sudo mv /tmp/pg-execute /usr/local/bin
+Source: https://github.com/Dev-Op5/pg-execute/
 
 CLI usage test example:
 1. Run the command: 'pg-execute generate-config' to generate the db.conf file.
@@ -194,9 +196,7 @@ CLI usage test example:
 If you can enter the psql console, then it works!
 EOL"
 
-run "curl -fsSL https://raw.githubusercontent.com/Dev-Op5/pg-execute/master/pg-execute -o /tmp/pg-execute"
-run "chmod +x /tmp/pg-execute"
-run "mv /tmp/pg-execute .venv/bin/pg-execute"
+
 
 # Create template for nginx reverse proxy
 if [[ "$DRY_RUN" == true ]]; then
@@ -255,8 +255,10 @@ run "cat > .gitignore << 'EOL'
 /logs/*.log
 /server.conf/nginx.live.conf
 /server.conf/nginx.local
-/filestorage/*
-!/filestorage/.gitkeep
+/theming/static.collect/
+!/theming/static.collect/.gitkeep
+/uploads/*
+!/uploads/.gitkeep
 *.log
 .DS_Store
 Thumbs.db
@@ -380,11 +382,13 @@ EOL"
 # Git init
 run "git init"
 run "git add .gitignore src/.gitignore"
-run "git commit -m '[init] commit & .gitignore'"
+run "git commit -m '[init] .gitignore rules'"
+run "git add utils"
+run "git commit -m '[init] BASH utils: manage and pg-execute'"
 run "git add pyrightconfig.json pyproject.toml .flake8 mypy.ini"
-run "git commit -m '[init] python tooling config (black, isort, flake8 and LSP pyright)'"
+run "git commit -m '[init] Devtools: black, isort, flake8 and LSP pyright'"
 run "git add ."
-run "git commit -m '[init] django project structure'"
+run "git commit -m '[init] Django project structure'"
 echo "✅ Django project initialized successfully."
 
 if [[ "$DRY_RUN" == false ]]; then
