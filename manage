@@ -10,7 +10,8 @@ set -u  # manually handled the exit code
 # scripted with ❤️ by eRQee (q@serverq.org)
 # =================================================================
 
-SCRIPT_PATH="$(realpath "$0")"
+SCRIPT_NAME="$(basename "$0")"
+SCRIPT_PATH="$(which "$SCRIPT_NAME")"
 VENV_BIN="$(dirname "$SCRIPT_PATH")"
 VENV_ROOT="$(realpath "$VENV_BIN/..")"
 ROOT_REPO="$(realpath "$VENV_ROOT/..")"
@@ -22,6 +23,11 @@ VENV_PIP="$VENV_BIN/pip"
 # ---------------------------------------------------------
 # sanity checks
 # ---------------------------------------------------------
+if [[ ! -x "$SCRIPT_PATH" ]]; then
+    echo "❌ virtualenv is not yet activated. please run: source .venv/bin/activate"
+    exit 1
+fi
+
 if [[ ! -x "$VENV_PYTHON" ]]; then
     echo "❌ Python binary not found in virtualenv"
     exit 1
