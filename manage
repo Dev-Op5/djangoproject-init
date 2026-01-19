@@ -127,20 +127,20 @@ EOF
 				LINES="$DEFAULT_LINES"
 
 				if [[ $# -ge 1 ]]; then
-				    if [[ "$1" =~ ^[0-9]+$ ]]; then
-				        LINES="$1"
-				    else
-				        echo "❌ invalid parameter: $1"
-				        echo "   usage: manage history [number_of_lines]"
-				        EXIT_CODE=1
-				        break
-				    fi
+					  if [[ "$1" =~ ^[0-9]+$ ]]; then
+					      LINES="$1"
+					  else
+					      echo "❌ invalid parameter: $1"
+					      echo "   usage: manage history [number_of_lines]"
+					      EXIT_CODE=1
+					      ;;
+					  fi
 				fi
 
 				if [[ ! -f "$LOG_FILE" ]]; then
-				    echo "❌ history log not found: $LOG_FILE"
-				    EXIT_CODE=1
-				    break
+					  echo "❌ history log not found: $LOG_FILE"
+					  EXIT_CODE=1
+					  ;;
 				fi
 
 				tail -n "$LINES" "$LOG_FILE"
