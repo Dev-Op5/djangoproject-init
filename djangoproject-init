@@ -334,7 +334,9 @@ run "cat > pyrightconfig.json << 'EOL'
     \"backup\",
     \"logs\",
     \"server.conf\",
-    \"scripts\"
+    \"spec\",
+    \"uploads\",
+    \"utils\"
   ]
 }
 EOL"
