@@ -285,19 +285,19 @@ EOL"
 
 # default .env.example
 run "cat > src/.env.example << 'EOL'
-EMAIL_HOST=mail.yourmailserver.com
-EMAIL_PORT=465
-EMAIL_USE_SSL=true
-EMAIL_USE_TLS=false
-EMAIL_HOST_USER=no-reply@yourmailserver.com
-EMAIL_HOST_PASSWORD=yourpassword
-DEFAULT_FROM_EMAIL=Notification Services <no-reply@yourmailserver.com>
+APP_DEBUG=False
+APP_SECRET_KEY=changeme
 
-DB_NAME=yourdatabasename
-DB_USER=yourdatabaseuser
-DB_PASSWORD=yourdatabasepassword
+APP_FRONTEND_SITE_URL=https://127.0.0.1:8000
+
+DB_NAME=databasename
+DB_USER=databaseuser
+DB_PASSWORD=databasepassword
 DB_HOST=127.0.0.1
 DB_PORT=5432
+
+UNOSEND_API_KEY=un_r4nd0mstr1n6fR0muNosenD
+UNOSEND_FROM_EMAIL=no-reply@yourdomain.tld
 EOL"
 
 # Tooling config
