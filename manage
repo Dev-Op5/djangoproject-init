@@ -10,26 +10,43 @@ set -u  # manually handled the exit code
 # scripted with ❤️ by eRQee (q@serverq.org)
 # =================================================================
 
+IN_DOCKER=false
+if [[ -f "/.dockerenv" ]]; then
+    IN_DOCKER=true
+fi
+
 SCRIPT_NAME="$(basename "$0")"
 SCRIPT_PATH="$(which "$SCRIPT_NAME")"
 VENV_BIN="$(dirname "$SCRIPT_PATH")"
 VENV_ROOT="$(realpath "$VENV_BIN/..")"
-ROOT_REPO="$(realpath "$VENV_ROOT/..")"
-SRC_DIR="$ROOT_REPO/src"
 
-VENV_PYTHON="$VENV_BIN/python"
-VENV_PIP="$VENV_BIN/pip"
+if [[ "$IN_DOCKER" == true ]]; then
+    ROOT_REPO="/app"
+    VENV_PYTHON="$(command -v python)"
+    VENV_PIP="$(command -v pip)"
+else
+    ROOT_REPO="$(realpath "$VENV_ROOT/..")"
+    VENV_PYTHON="$VENV_BIN/python"
+    VENV_PIP="$VENV_BIN/pip"
+fi
+
+SRC_DIR="$ROOT_REPO/src"
 
 # ---------------------------------------------------------
 # sanity checks
 # ---------------------------------------------------------
-if [[ ! -x "$SCRIPT_PATH" ]]; then
+if [[ "$IN_DOCKER" == false && ! -x "$SCRIPT_PATH" ]]; then
     echo "❌ virtualenv is not yet activated. please run: source .venv/bin/activate"
     exit 1
 fi
 
+if [[ "$IN_DOCKER" == true && ! -d "/app/src" ]]; then
+    echo "❌ invalid container layout: /app/src not found"
+    exit 1
+fi
+
 if [[ ! -x "$VENV_PYTHON" ]]; then
-    echo "❌ Python binary not found in virtualenv"
+    echo "❌ Python binary not found in the environment"
     exit 1
 fi
 
