@@ -105,8 +105,8 @@ SUBCOMMAND="${1:-}"
 ORIGINAL_CWD="$PWD"
 
 case "$SUBCOMMAND" in
-		toc)
-		    cat << 'EOF'
+        toc)
+            cat << 'EOF'
 =============================================================================
 manage — django command gateway for artisan
 ================================ : scripted with ❤️ by eRQee (q@serverq.org)
@@ -134,35 +134,34 @@ Notes:
 - git and pip commands are executed from current working directory
 - all commands are audited in logs/bash_history.log
 EOF
-		    EXIT_CODE=0
-		    ;;
+            EXIT_CODE=0
+            ;;
 
-		history)
-				shift
-
-				DEFAULT_LINES=20
-				LINES="$DEFAULT_LINES"
-
-				if [[ $# -ge 1 ]]; then
-					  if [[ "$1" =~ ^[0-9]+$ ]]; then
-					      LINES="$1"
-					  else
-					      echo "❌ invalid parameter: $1"
-					      echo "   usage: manage history [number_of_lines]"
-					      EXIT_CODE=1
-					      ;;
-					  fi
-				fi
-
-				if [[ ! -f "$LOG_FILE" ]]; then
-					  echo "❌ history log not found: $LOG_FILE"
-					  EXIT_CODE=1
-					  ;;
-				fi
-
-				tail -n "$LINES" "$LOG_FILE"
-				EXIT_CODE=$?
-				;;
+    history)
+        shift
+        DEFAULT_LINES=20
+        LINES="$DEFAULT_LINES"
+        ERROR=false
+        if [[ $# -ge 1 ]]; then
+            if [[ "$1" =~ ^[0-9]+$ ]]; then
+                LINES="$1"
+            else
+                echo "❌ invalid parameter: $1"
+                echo "   usage: manage history [number_of_lines]"
+                EXIT_CODE=1
+                ERROR=true
+            fi
+        fi
+        if [[ "$ERROR" == false && ! -f "$LOG_FILE" ]]; then
+            echo "❌ history log not found: $LOG_FILE"
+            EXIT_CODE=1
+            ERROR=true
+        fi
+        if [[ "$ERROR" == false ]]; then
+            tail -n "$LINES" "$LOG_FILE"
+            EXIT_CODE=$?
+        fi
+        ;;
 
     git)
         shift
@@ -175,14 +174,14 @@ EOF
         EXIT_CODE=$?
         ;;
     tree)
-    		if ! command -v tree >/dev/null 2>&1; then
-		      echo "❌ 'tree' command not found"
-		      echo "   install it first by run: sudo apt install tree"
-		      EXIT_CODE=1
-		    else
-		      tree -a -I '.git|node_modules|__pycache__|static.collect|.venv' "$ROOT_REPO"
-		      EXIT_CODE=$?
-		    fi
+            if ! command -v tree >/dev/null 2>&1; then
+              echo "❌ 'tree' command not found"
+              echo "   install it first by run: sudo apt install tree"
+              EXIT_CODE=1
+            else
+              tree -a -I '.git|node_modules|__pycache__|static.collect|.venv' "$ROOT_REPO"
+              EXIT_CODE=$?
+            fi
         ;;
     *)
         cd "$SRC_DIR"
