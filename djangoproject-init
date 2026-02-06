@@ -122,7 +122,7 @@ echo "==> Using $DJANGO_SPEC"
 # -------------------------
 # Target directory handling
 # -------------------------
-echo "==> Target directory: $TARGET_DIR"
+echo "==> Target directory : $TARGET_DIR"
 echo "==> Django version   : $DJANGO_VERSION"
 
 if [[ "$TARGET_DIR" == "." ]]; then
@@ -564,5 +564,4 @@ if [[ "$DRY_RUN" == false ]]; then
     echo ""
     echo "================================================================================"
 fi
-
 
