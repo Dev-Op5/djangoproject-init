@@ -14,7 +14,7 @@ DRY_RUN=false
 WORKSPACE_DIR=workspace
 
 TIMESTAMP="$(date '+%Y-%m-%d %H:%M:%S')"
-LOG_FILE="logs/bash_history.log"
+LOG_FILE="1nfra/logs/bash_history.log"
 
 print_help() {
 cat << 'EOF'
@@ -144,7 +144,7 @@ fi
 # Bootstrap process
 # -------------------------
 if [[ "$DRY_RUN" == false ]]; then
-    mkdir -p logs
+    mkdir -p 1nfra/logs
     {
         echo "======================================================================"
         echo " djangoproject-init run at [$TIMESTAMP]"
@@ -153,8 +153,8 @@ if [[ "$DRY_RUN" == false ]]; then
 fi
 
 
-run "mkdir -p backup backup/routines logs server.conf/certs spec theming/{static,static.collect,template-overrides} uploads utils"
-run "touch logs/.gitkeep server.conf/.gitkeep server.conf/certs/.gitkeep backup/routines/.gitkeep spec/.gitkeep theming/static/.gitkeep theming/static.collect/.gitkeep theming/template-overrides/.gitkeep uploads/.gitkeep utils/.gitkeep"
+run "mkdir -p 1nfra/{backup,certs,env} concepts theming/{static,static.collect,template-overrides} uploads utils"
+run "touch 1nfra/certs/.gitkeep 1nfra/env/.gitkeep 1nfra/logs/.gitkeep concepts/.gitkeep theming/static/.gitkeep theming/static.collect/.gitkeep theming/template-overrides/.gitkeep uploads/.gitkeep utils/.gitkeep"
 
 run "python -m venv .venv"
 
@@ -172,12 +172,12 @@ run "ln -rs \"$UTILS_DIR\"/pg-execute .venv/bin/pg-execute"
 
 run "source .venv/bin/activate"
 run "python -m pip install --upgrade pip"
-run "python -m pip install \"$DJANGO_SPEC\" django-stubs django-stubs-ext python-decouple "
-
+run "python -m pip install \"$DJANGO_SPEC\" django-stubs django-stubs-ext python-decouple gunicorn"
+run "python -m pip freeze > requirements.txt"
 
 # Defaults file
 # Create backup/restore configuration file
-run "cat > backup/db.conf.example << EOL
+run "cat > 1nfra/backup/db.conf.example << EOL
 db_host = localhost
 db_port = 5432
 db_user = postgres
@@ -185,8 +185,8 @@ db_pass = changeme
 db_name = yourdatabasename
 EOL"
 
-run "cat > backup/README.md << EOL
-Backup/Restore in this folder is specific to PostgreSQL using the CLI 'pg-execute'. Available on your \`utils\` folder.
+run "cat > 1nfra/backup/README.md << EOL
+This Backup/Restore (specific to PostgreSQL) operates using the CLI 'pg-execute'. Available on your 'utils' folder.
 
 Source: https://github.com/Dev-Op5/pg-execute/
 
@@ -198,14 +198,12 @@ CLI usage test example:
 If you can enter the psql console, then it works!
 EOL"
 
-
-
 # Create template for nginx reverse proxy
 if [[ "$DRY_RUN" == true ]]; then
-run "echo 'create nginx reverse proxy configuration template in server.conf/nginx.local.example'"
+run "echo 'create nginx reverse proxy configuration template in 1nfra/nginx-example.local.conf'"
 else
 
-cat > server.conf/nginx.local.example << 'EOL'
+cat > 1nfra/nginx-example.local.conf << 'EOL'
 server {
   listen                     80;
   server_name                example.local;
@@ -216,22 +214,24 @@ server {
   listen                     443 ssl;
   http2                      on;
   server_name                example.local;
+
 EOL
 
 CURRENT_DIR=$(pwd)
-cat >> server.conf/nginx.local.example << EOL
-  access_log                 ${CURRENT_DIR}/logs/access.log gzip;
-  error_log                  ${CURRENT_DIR}/logs/error.log notice;
+cat >> 1nfra/nginx-example.local.conf << EOL
+  root                       ${CURRENT_DIR};
+  access_log                 ${CURRENT_DIR}/1nfra/logs/access.log gzip;
+  error_log                  ${CURRENT_DIR}/1nfra/logs/error.log notice;
 
-  ssl_certificate            ${CURRENT_DIR}/server.conf/certs/example.local.pem;
+  ssl_certificate            ${CURRENT_DIR}/1nfra/certs/example.local.pem;
   ssl_certificate_key        ${CURRENT_DIR}/server.conf/certs/example.local-key.pem;
+
+EOL
+
+cat >> 1nfra/nginx-example.local.conf << 'EOL'
   include                    /etc/nginx/snippets/ssl-params.conf;
   include                    /etc/nginx/snippets/headers.conf;
 
-  root                       ${CURRENT_DIR};
-EOL
-
-cat >> server.conf/nginx.local.example << 'EOL'
   location / {
     proxy_pass               http://127.0.0.1:8000;
     error_page               502 = /502.html;
@@ -252,11 +252,15 @@ fi
 run "cat > .gitignore << 'EOL'
 .env
 .venv/
-/backup/db.conf
-/backup/*.7z
-/logs/*.log
-/server.conf/nginx.live.conf
-/server.conf/nginx.local
+/1nfra/backup/db.conf
+/1nfra/backup/*.7z
+/1nfra/certs/*
+!/1nfra/certs/.gitkeep
+/1nfra/env/*
+!/1nfra/env/env.example
+/1nfra/logs/*.log
+!/1nfra/logs/.gitkeep
+/1nfra/*.conf
 /theming/static.collect/
 !/theming/static.collect/.gitkeep
 /uploads/*
@@ -264,6 +268,8 @@ run "cat > .gitignore << 'EOL'
 *.log
 .DS_Store
 Thumbs.db
+*.sublime-project
+.sublime-workspace
 EOL"
 
 # Django project
@@ -279,8 +285,13 @@ db.sqlite3
 .vscode/
 .idea/
 .coverage
+*.sublime-project
+.sublime-workspace
 htmlcov/
 .pytest_cache/
+mypy.ini
+pyproject.toml
+pyrightconfig.json
 EOL"
 
 # default .env.example
@@ -296,29 +307,150 @@ DB_PASSWORD=databasepassword
 DB_HOST=127.0.0.1
 DB_PORT=5432
 
+UNOSEND_ACCOUNT=your@email.com
 UNOSEND_API_KEY=un_r4nd0mstr1n6fR0muNosenD
 UNOSEND_FROM_EMAIL=no-reply@yourdomain.tld
+
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REDIRECT_URI=
+
+EOL"
+
+cp src/.env.example 1nfra/env/env.example
+
+# IDE Setup: sublime-project
+run "cat > $TARGET_DIR.sublime-project << 'EOL'
+{
+  \"folder_exclude_patterns\": [
+    \".venv\",
+    \"__pycache__\",
+    \".git\",
+    \"node_modules\"
+  ],
+  \"file_exclude_patterns\": [
+    \"*.pyc\"
+  ],
+
+  \"settings\": {
+    // === Font & Readability ===
+    \"font_face\": \"Jetbrains Mono\",
+    \"font_size\": 11,
+    \"line_padding_top\": 2,
+    \"line_padding_bottom\": 2,
+
+    // === Python / Django ===
+    \"tab_size\": 4,
+    \"translate_tabs_to_spaces\": true,
+    \"trim_trailing_white_space_on_save\": true,
+    \"ensure_newline_at_eof_on_save\": true,
+
+    // === Outline First ===
+    \"outline_show_variables\": false,
+    \"outline_sort_symbols\": false,
+
+    // === LSP sanity ===
+    \"index_files\": true,
+    \"lsp_show_code_actions\": true,
+    \"python.linting.enabled\": true,
+    \"python.formatting.provider\": \"black\",
+    \"python.formatting.blackArgs\": [
+        \"--line-length\",
+        \"88\"
+    ],
+    \"lsp_format_on_save\": true,
+
+    // === UX kecil tapi berasa ===
+    \"caret_style\": \"phase\",
+    \"bold_folder_labels\": true,
+    \"highlight_modified_tabs\": true,
+    \"show_minimap\": false,
+    \"highlight_line\": true,
+    \"draw_white_space\": \"selection\",
+    \"show_rel_path\": true,
+  }
+}
+EOL"
+
+# Template Dockerfile
+run "cat > Dockerfile << 'EOL'
+#
+# Suggested image name: django-$TARGET_DIR:latest
+#
+FROM python:3.13-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+RUN apt-get update && apt-get install -y  \\
+    libpq-dev \\
+    gcc \\
+    libcairo2 \\
+    libcairo2-dev \\
+    libpango-1.0-0 \\
+    libpangocairo-1.0-0 \\
+    libgdk-pixbuf-2.0-0 \\
+    nano \\
+    tree \\
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+ENV PYTHONPATH=/app/src
+ENV PATH=\"/app/utils:\${PATH}\"
+
+RUN mkdir -p /app/logs
+
+# === install deps ===
+COPY requirements.txt /app/
+RUN pip install --no-cache-dir -r requirements.txt
+
+# === Django project ===
+COPY src /app/src
+COPY theming /app/theming
+COPY uploads /app/uploads
+COPY utils /app/utils
+
+# === Command ===
+CMD [\"gunicorn\", \"src.workspace.wsgi:application\", \"--bind\", \"0.0.0.0:8000\", \"--workers\", \"2\"]
+
+EOL"
+
+# Template docker-compose.yml 
+run "cat > docker-compose.yml << 'EOL'
+services:
+  django:
+    image: django-$TARGET_DIR:latest
+    container_name: django-$TARGET_DIR
+    env_file:
+      - ./1nfra/env/env.example
+    volumes:
+      - ./1nfra/logs:/app/logs
+      - ./theming/static.collect:/app/theming/static.collect
+      - ./uploads:/app/uploads
+    network_mode: host
+    restart: unless-stopped
 EOL"
 
 # Tooling config
-run "cat > pyproject.toml << 'EOL'
+run "cat > src/pyproject.toml << 'EOL'
 [tool.black]
 line-length = 88
-target-version = ['py312']
+target-version = ['py313']
 
 [tool.isort]
 profile = 'black'
 line_length = 88
 EOL"
 
-run "cat > .flake8 << 'EOL'
+run "cat > src/.flake8 << 'EOL'
 [flake8]
 max-line-length = 88
 extend-ignore = E203, W503
 exclude = .git,__pycache__,.env,.venv
 EOL"
 
-run "cat > pyrightconfig.json << 'EOL'
+run "cat > src/pyrightconfig.json << 'EOL'
 {
   \"pythonVersion\": \"3.13\",
   \"pythonPlatform\": \"Linux\",
@@ -344,9 +476,9 @@ run "cat > pyrightconfig.json << 'EOL'
 }
 EOL"
 
-run "cat > mypy.ini << 'EOL'
+run "cat > src/mypy.ini << 'EOL'
 [mypy]
-python_version = 3.12
+python_version = 3.13
 plugins = mypy_django_plugin.main
 ignore_missing_imports = true
 
@@ -367,9 +499,9 @@ run "cat > README.md << 'EOL'
 2. Use the \`manage\` command to run everything that \`python3 manage.py\` did.
    Also, use the \`manage\` command to run pip installation, eg: \`manage pip install some-python-package\`.
    
-   > ✅ By using that, you'll have a command forensic which you can review at \`logs/bash_history.log\`
+   > ✅ By using that, you'll have a command forensic which you can review at \`1nfra/logs/bash_history.log\`
 
-3. In order to make LSP-pyright more intelligent, adjust this file: `src/$WORKSPACE_DIR/settings.py`
+3. In order to make LSP-pyright more intelligent, adjust this file: \`src/$WORKSPACE_DIR/settings.py\`
 
    a) add these lines in the import declaration:
 
@@ -384,16 +516,32 @@ run "cat > README.md << 'EOL'
 
 5. Also run this: \`manage toc\` -- to see the things can do with those **django command gateway for artisan**
 
+
+## Sublime Text Setup (Django Mode)
+
+Recommended Sublime Text packages:
+- Outline
+- LSP
+- LSP-pyright
+- SublimeLinter + flake8
+- GitGutter
+- Djaneiro
+
+Install via:
+Cmd+Shift+P → Package Control: Install Package
+
 EOL"
 
 # Git init
 run "git init"
-run "git add .gitignore src/.gitignore"
-run "git commit -m '[init] .gitignore rules'"
 run "git add utils"
 run "git commit -m '[init] BASH utils: manage and pg-execute'"
-run "git add pyrightconfig.json pyproject.toml .flake8 mypy.ini"
-run "git commit -m '[init] Devtools: black, isort, flake8 and LSP pyright'"
+run "git add -f 1nfra/nginx-example.local.conf"
+run "git commit -m '[init] example of nginx configuration'"
+run "git add requirements.txt"
+run "git commit -m '[init] requirements.txt'"
+run "git add .gitignore src/.gitignore"
+run "git commit -m '[init] .gitignore rules'"
 run "git add ."
 run "git commit -m '[init] Django project structure'"
 echo "✅ Django project initialized successfully."
@@ -415,9 +563,6 @@ if [[ "$DRY_RUN" == false ]]; then
     echo "  manage git push"
     echo ""
     echo "================================================================================"
-   
-cat README.md
- 
 fi
 
 
