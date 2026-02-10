@@ -7,7 +7,7 @@ set -euo pipefail
 #
 # scripted with ❤️ by eRQee (q@serverq.org)
 # ==============================================
-
+NO_LOG=false
 SCRIPT_NAME="$(basename "$0")"
 DEFAULT_DJANGO_MAJOR=6
 DRY_RUN=false
@@ -56,13 +56,14 @@ run() {
         echo "[dry-run] $*"
     else
         eval "$@"
-        if [[ "$@" != "--self-update" || "$@" != "self-update" ]]; then
+        if [[ "$NO_LOG" != true ]]; then
             echo "$@" >> "$LOG_FILE"
         fi
     fi
 }
 
 self_update() {
+    NO_LOG=true
     TMP_FILE="$(mktemp)"
     trap 'rm -f "$TMP_FILE"' EXIT
 
