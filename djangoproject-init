@@ -4,7 +4,7 @@ set -euo pipefail
 # ==============================================
 # djangoproject-init
 # Bootstrap Django development project
-# 
+#
 # scripted with ❤️ by eRQee (q@serverq.org)
 # ==============================================
 
@@ -28,7 +28,7 @@ Arguments:
                  - folder   -> create & use folder
                  - .        -> use current directory
                  - (none)   -> use default "new.djangoproject" folder
-                 
+
   VERSION        Optional Django version selector:
                  - 6        -> Django >=6.0,<7.0
                  - 6.0      -> Django >=6.0,<6.1
@@ -38,6 +38,7 @@ Arguments:
 Options:
   --dry-run      Print actions without executing
   --help         Show this help message
+  --self-update  Update the script to the latest version
 
 
 Examples:
@@ -57,6 +58,38 @@ run() {
         eval "$@"
         echo "$@" >> "$LOG_FILE"
     fi
+}
+
+self_update() {
+    TMP_FILE="$(mktemp)"
+    trap 'rm -f "$TMP_FILE"' EXIT
+
+    mkdir -p "$HOME/.local/bin"
+
+    run "curl -fsSL https://raw.githubusercontent.com/Dev-Op5/djangoproject-init/refs/heads/master/djangoproject-init -o \"$TMP_FILE\""
+    run "chmod +x \"$TMP_FILE\""
+
+    read -r CHECKSUM_DOWNLOADED _ < <(sha1sum "$TMP_FILE")
+
+    if [[ -f "$HOME/.local/bin/djangoproject-init" ]]; then
+        read -r CHECKSUM_EXISTING _ < <(sha1sum "$HOME/.local/bin/djangoproject-init")
+    else
+        CHECKSUM_EXISTING=""
+    fi
+
+    if [[ -n "$CHECKSUM_EXISTING" ]]; then
+        if [[ "$CHECKSUM_DOWNLOADED" == "$CHECKSUM_EXISTING" ]]; then
+            echo "Already up to date."
+            exit 0
+        fi
+        run "rm \"$HOME/.local/bin/djangoproject-init\""
+    else
+        echo "Installing djangoproject-init to $HOME/.local/bin/"
+    fi
+
+    run "mv \"$TMP_FILE\" \"$HOME/.local/bin/djangoproject-init\""
+    echo "UPDATE SUCCESSFULLY!"
+    exit 0
 }
 
 # -------------------------
@@ -79,6 +112,10 @@ for arg in "$@"; do
             ;;
         --version=*)
             DJANGO_VERSION="${arg#*=}"
+            ;;
+        --self-update)
+            self_update
+            exit 0
             ;;
         -*)
             echo "❌ Unknown option: $arg"
@@ -130,6 +167,9 @@ if [[ "$TARGET_DIR" == "." ]]; then
         echo "❌ Current directory is not empty"
         exit 3
     fi
+elif [[ "$TARGET_DIR" == "self-update" ]]; then
+    self_update
+    exit 3
 else
     if [[ -e "$TARGET_DIR" ]]; then
         echo "❌ Directory already exists: $TARGET_DIR"
@@ -270,6 +310,7 @@ run "cat > .gitignore << 'EOL'
 Thumbs.db
 *.sublime-project
 .sublime-workspace
+.zed/
 EOL"
 
 # Django project
@@ -284,6 +325,7 @@ db.sqlite3
 *.log
 .vscode/
 .idea/
+.zed/
 .coverage
 *.sublime-project
 .sublime-workspace
@@ -318,59 +360,6 @@ GOOGLE_REDIRECT_URI=
 EOL"
 
 cp src/.env.example 1nfra/env/env.example
-
-# IDE Setup: sublime-project
-run "cat > $TARGET_DIR.sublime-project << 'EOL'
-{
-  \"folder_exclude_patterns\": [
-    \".venv\",
-    \"__pycache__\",
-    \".git\",
-    \"node_modules\"
-  ],
-  \"file_exclude_patterns\": [
-    \"*.pyc\"
-  ],
-
-  \"settings\": {
-    // === Font & Readability ===
-    \"font_face\": \"Jetbrains Mono\",
-    \"font_size\": 11,
-    \"line_padding_top\": 2,
-    \"line_padding_bottom\": 2,
-
-    // === Python / Django ===
-    \"tab_size\": 4,
-    \"translate_tabs_to_spaces\": true,
-    \"trim_trailing_white_space_on_save\": true,
-    \"ensure_newline_at_eof_on_save\": true,
-
-    // === Outline First ===
-    \"outline_show_variables\": false,
-    \"outline_sort_symbols\": false,
-
-    // === LSP sanity ===
-    \"index_files\": true,
-    \"lsp_show_code_actions\": true,
-    \"python.linting.enabled\": true,
-    \"python.formatting.provider\": \"black\",
-    \"python.formatting.blackArgs\": [
-        \"--line-length\",
-        \"88\"
-    ],
-    \"lsp_format_on_save\": true,
-
-    // === UX kecil tapi berasa ===
-    \"caret_style\": \"phase\",
-    \"bold_folder_labels\": true,
-    \"highlight_modified_tabs\": true,
-    \"show_minimap\": false,
-    \"highlight_line\": true,
-    \"draw_white_space\": \"selection\",
-    \"show_rel_path\": true,
-  }
-}
-EOL"
 
 # Template Dockerfile
 run "cat > Dockerfile << 'EOL'
@@ -416,7 +405,7 @@ CMD [\"gunicorn\", \"src.workspace.wsgi:application\", \"--bind\", \"0.0.0.0:800
 
 EOL"
 
-# Template docker-compose.yml 
+# Template docker-compose.yml
 run "cat > docker-compose.yml << 'EOL'
 services:
   django:
@@ -498,7 +487,7 @@ run "cat > README.md << 'EOL'
 
 2. Use the \`manage\` command to run everything that \`python3 manage.py\` did.
    Also, use the \`manage\` command to run pip installation, eg: \`manage pip install some-python-package\`.
-   
+
    > ✅ By using that, you'll have a command forensic which you can review at \`1nfra/logs/bash_history.log\`
 
 3. In order to make LSP-pyright more intelligent, adjust this file: \`src/$WORKSPACE_DIR/settings.py\`
@@ -511,24 +500,11 @@ run "cat > README.md << 'EOL'
    \`\`\`
 
    b) in \`INSTALLED_APPS\` ⇒ add: \`\"django_stubs_ext\"\`
-   
+
 4. ⚠️  If you plan to use a custom User model, define it BEFORE the first migrate.
 
 5. Also run this: \`manage toc\` -- to see the things can do with those **django command gateway for artisan**
 
-
-## Sublime Text Setup (Django Mode)
-
-Recommended Sublime Text packages:
-- Outline
-- LSP
-- LSP-pyright
-- SublimeLinter + flake8
-- GitGutter
-- Djaneiro
-
-Install via:
-Cmd+Shift+P → Package Control: Install Package
 
 EOL"
 
@@ -564,4 +540,3 @@ if [[ "$DRY_RUN" == false ]]; then
     echo ""
     echo "================================================================================"
 fi
-

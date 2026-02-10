@@ -98,6 +98,33 @@ git_working_tree_state() {
     fi
 }
 
+# util: self-update
+self_update() {
+    UTILS_DIR="$ROOT_REPO/utils"
+    TMP_FILE="$(mktemp)"
+
+    run "curl -fsSL https://raw.githubusercontent.com/Dev-Op5/djangoproject-init/refs/heads/master/manage -o \"$TMP_FILE\""
+    run "chmod +x \"$TMP_FILE\""
+
+    read -r CHECKSUM_DOWNLOADED _ < <(sha1sum "$TMP_FILE")
+    read -r CHECKSUM_EXISTING _ < <(sha1sum "$UTILS_DIR/manage")
+
+    if [[ "$CHECKSUM_DOWNLOADED" == "$CHECKSUM_EXISTING" ]]; then
+        echo "Your 'manage' utility is already identical with the GitHub (branch: master) version."
+        rm -f "$TMP_FILE"
+        exit 0
+    fi
+
+    # update path
+    run "rm -f .venv/bin/manage"
+    run "rm -f \"$UTILS_DIR/manage\""
+    run "mv \"$TMP_FILE\" \"$UTILS_DIR/manage\""
+    run "ln -rs \"$UTILS_DIR/manage\" .venv/bin/manage"
+
+    echo "Update successful!"
+    exit 0
+}
+
 # ---------------------------------------------------------
 # command dispatch
 # ---------------------------------------------------------
@@ -116,6 +143,7 @@ Inspector commands:
   manage tree           Show project directory structure
   manage history        Show the audit log (default: 20 lines)
   manage history 200    Show the 200 lines of audit log
+  manage self-update    Update the 'manage' utility to the latest version
 
 Pass-through commands:
   manage git <args>     Run git commands in repo scope
@@ -136,6 +164,16 @@ Notes:
 EOF
             EXIT_CODE=0
             ;;
+
+    self-update)
+        self_update
+        exit 0
+        ;;
+
+    --self-update)
+        self_update
+        exit 0
+        ;;
 
     history)
         shift
@@ -206,4 +244,3 @@ else
 fi
 
 exit $EXIT_CODE
-
