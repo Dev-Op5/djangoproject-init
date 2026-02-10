@@ -312,9 +312,11 @@ run "cat > .gitignore << 'EOL'
 /1nfra/logs/*.log
 !/1nfra/logs/.gitkeep
 /1nfra/*.conf
-/theming/static.collect/
+/theming/static.collect/*
+!/theming/static.collect/
 !/theming/static.collect/.gitkeep
 /uploads/*
+!/uploads/
 !/uploads/.gitkeep
 *.log
 .DS_Store
