@@ -47,7 +47,8 @@ Examples:
   djangoproject-init <directory> --version=6.0
 
   djangoproject-init --dry-run     # to show the command which will be executed (no changes made)
-  djangoproject-init --help        # to show this help
+  djangoproject-init help          # to show this help
+  djangoproject-init self-update   # to update the script to the latest version
 EOF
 }
 
