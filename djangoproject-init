@@ -66,9 +66,6 @@ run() {
 self_update() {
     NO_LOG=true
     TMP_FILE="$(mktemp)"
-
-    trap 'rm -f "$TMP_FILE"' EXIT
-
     mkdir -p "$HOME/.local/bin"
 
     run "curl -fsSL https://raw.githubusercontent.com/Dev-Op5/djangoproject-init/refs/heads/master/djangoproject-init -o \"$TMP_FILE\""
@@ -81,12 +78,13 @@ self_update() {
         echo "Current script checksum: $CHECKSUM_EXISTING"
     else
         CHECKSUM_EXISTING=""
-        echo "First time installation (or script not found in $HOME/.local/bin)"
+        echo "Script not found in $HOME/.local/bin"
     fi
 
     if [[ -n "$CHECKSUM_EXISTING" ]]; then
         if [[ "$CHECKSUM_DOWNLOADED" == "$CHECKSUM_EXISTING" ]]; then
             echo "Already up to date."
+            rm -f "$TMP_FILE"
             exit 0
         fi
         run "rm \"$HOME/.local/bin/djangoproject-init\""
@@ -96,6 +94,7 @@ self_update() {
 
     run "cp \"$TMP_FILE\" \"$HOME/.local/bin/djangoproject-init\""
     echo "UPDATE SUCCESSFULLY!"
+    rm -f "$TMP_FILE"
     exit 0
 }
 
