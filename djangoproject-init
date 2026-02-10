@@ -66,19 +66,22 @@ run() {
 self_update() {
     NO_LOG=true
     TMP_FILE="$(mktemp)"
+
     trap 'rm -f "$TMP_FILE"' EXIT
 
     mkdir -p "$HOME/.local/bin"
 
     run "curl -fsSL https://raw.githubusercontent.com/Dev-Op5/djangoproject-init/refs/heads/master/djangoproject-init -o \"$TMP_FILE\""
     run "chmod +x \"$TMP_FILE\""
-
+    echo "Downloaded new script version to $TMP_FILE"
     read -r CHECKSUM_DOWNLOADED _ < <(sha1sum "$TMP_FILE")
-
+    echo "Checksum: $CHECKSUM_DOWNLOADED"
     if [[ -f "$HOME/.local/bin/djangoproject-init" ]]; then
         read -r CHECKSUM_EXISTING _ < <(sha1sum "$HOME/.local/bin/djangoproject-init")
+        echo "Current script checksum: $CHECKSUM_EXISTING"
     else
         CHECKSUM_EXISTING=""
+        echo "First time installation (or script not found in $HOME/.local/bin)"
     fi
 
     if [[ -n "$CHECKSUM_EXISTING" ]]; then
@@ -88,10 +91,10 @@ self_update() {
         fi
         run "rm \"$HOME/.local/bin/djangoproject-init\""
     else
-        echo "Installing djangoproject-init to $HOME/.local/bin/"
+        echo "Installing new djangoproject-init to $HOME/.local/bin/"
     fi
 
-    run "mv \"$TMP_FILE\" \"$HOME/.local/bin/djangoproject-init\""
+    run "cp \"$TMP_FILE\" \"$HOME/.local/bin/djangoproject-init\""
     echo "UPDATE SUCCESSFULLY!"
     exit 0
 }
