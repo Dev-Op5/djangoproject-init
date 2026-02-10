@@ -56,7 +56,9 @@ run() {
         echo "[dry-run] $*"
     else
         eval "$@"
-        echo "$@" >> "$LOG_FILE"
+        if [[ "$arg" != "--self-update" ]]; then
+            echo "$@" >> "$LOG_FILE"
+        endif
     fi
 }
 
@@ -121,6 +123,14 @@ for arg in "$@"; do
             echo "❌ Unknown option: $arg"
             exit 2
             ;;
+        self-update)
+            self_update
+            exit 0
+            ;;
+        help)
+            print_help
+            exit 0
+            ;;
         *)
             if [[ -z "$TARGET_DIR" ]]; then
                 TARGET_DIR="$arg"
@@ -167,12 +177,6 @@ if [[ "$TARGET_DIR" == "." ]]; then
         echo "❌ Current directory is not empty"
         exit 3
     fi
-elif [[ "$TARGET_DIR" == "help" ]]; then
-    print_help
-    exit 0
-elif [[ "$TARGET_DIR" == "self-update" ]]; then
-    self_update
-    exit 3
 else
     if [[ -e "$TARGET_DIR" ]]; then
         echo "❌ Directory already exists: $TARGET_DIR"
