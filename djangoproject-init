@@ -464,7 +464,7 @@ run "cat > src/pyrightconfig.json << 'EOL'
   \"reportUnknownVariableType\": false,
   \"useLibraryCodeForTypes\": true,
   \"venvPath\": \".\",
-  \"venv\": \".venv\",
+  \"venv\": \"../.venv\",
   \"exclude\": [
     \"**/migrations\",
     \"**/__pycache__\",
