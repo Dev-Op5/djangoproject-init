@@ -56,7 +56,7 @@ run() {
         echo "[dry-run] $*"
     else
         eval "$@"
-        if [[ "$arg" != "--self-update" || "$arg" != "self-update" ]]; then
+        if [[ "$@" != "--self-update" || "$@" != "self-update" ]]; then
             echo "$@" >> "$LOG_FILE"
         fi
     fi
